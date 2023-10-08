@@ -32,11 +32,44 @@ class Utils():
         else:
             return f"{hours:02d}:{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
 
+    @staticmethod
+    def show_error_popup(message):
+        popup = Popup(
+            title="Error",
+            content=BoxLayout(orientation="vertical"),
+            size_hint=(None, None),
+            size=(300, 150)
+        )
+
+        label = Label(text=message)
+        ok_button = Button(text="OK")
+        ok_button.bind(on_release=popup.dismiss)
+
+        popup.content.add_widget(label)
+        popup.content.add_widget(ok_button)
+
+        popup.open()
+
+    @staticmethod
+    def load_score_file(file_path):
+        try:
+            with open(file_path, "rb") as file:
+                content = file.read().decode("utf-16-le", errors="ignore").lstrip("\ufeff")
+            return json.loads(content)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            self.show_error_popup(f"Error reading file: {str(e)}")
+            return None
+
 class SteamSkyMusicStudioGUI(App):
     def build(self):
         self.title = "SteamSky Music Studio"
         self.score_folder = "./score"
         self.layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
+
+        if not os.path.exists(self.score_folder):
+            os.makedirs(self.score_folder)
+            print("Since there is no score folder, SteamSky Music Studio have created one. Please place the Sheet file there.")
+            sys.exit()
 
         resource_add_path('./fonts')
         LabelBase.register(DEFAULT_FONT, fn_regular="NotoSansCJK-Regular.ttc")
@@ -57,23 +90,6 @@ class SteamSkyMusicStudioGUI(App):
 
         return self.layout
 
-    def show_error_popup(self, message):
-        popup = Popup(
-            title="Error",
-            content=BoxLayout(orientation="vertical"),
-            size_hint=(None, None),
-            size=(300, 150)
-        )
-
-        label = Label(text=message)
-        ok_button = Button(text="OK")
-        ok_button.bind(on_release=popup.dismiss)
-
-        popup.content.add_widget(label)
-        popup.content.add_widget(ok_button)
-
-        popup.open()
-
     def press_key(self, key):
         key_mappings = {
             "1Key0": "Y", "1Key1": "U", "1Key2": "I", "1Key3": "O",
@@ -87,13 +103,13 @@ class SteamSkyMusicStudioGUI(App):
             print(f"{key} UnknownKey")
 
     def play_score(self, file_path):
-        score_data = self.load_score_file(file_path)
         Utility = Utils()
+        score_data = Utility.load_score_file(file_path)
 
         if score_data and isinstance(score_data, list):
             hwnd = win32gui.FindWindow(None, "Sky")
             if hwnd == 0:
-                self.show_error_popup("Process Not Found")
+                Utility.show_error_popup("Process Not Found")
                 return
 
             win32gui.SetForegroundWindow(hwnd)
@@ -115,25 +131,8 @@ class SteamSkyMusicStudioGUI(App):
                 end_time = score_data[0]["songNotes"][-1]["time"]
                 print(f"[{progress:.2f}%] Press Key {key} at {Utility.format_time(int(elapsed_time))}/{Utility.format_time(int(end_time))}")
                 self.press_key(key)
-
-#                if i + 1 < len(score_data[0]["songNotes"]):
-#                    next_note = score_data[0]["songNotes"][i + 1]
-#                    elapsed_time = time.time() * 1000 - start_time
-#                    time_to_wait = next_note["time"] - elapsed_time
-#                    if time_to_wait > 0:
-#                        time.sleep(time_to_wait / 1000)
-
         else:
-            self.show_error_popup("Sorry, Not Supported This File")
-
-    def load_score_file(self, file_path):
-        try:
-            with open(file_path, "rb") as file:
-                content = file.read().decode("utf-16-le", errors="ignore").lstrip("\ufeff")
-            return json.loads(content)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            self.show_error_popup(f"Error reading file: {str(e)}")
-            return None
+            Utility.show_error_popup("Sorry, Not Supported This File")
 
     def run_music(self, instance):
         selected_file = self.file_chooser.selection and self.file_chooser.selection[0]
@@ -141,10 +140,10 @@ class SteamSkyMusicStudioGUI(App):
             self.play_score(selected_file)
 
     def select_random_score(self, instance):
+        Utility = Utils()
         selected_files = [f for f in os.listdir(self.score_folder) if f.endswith((".json", ".txt"))]
         if not selected_files:
-            print("No score files found in the score folder.")
-            sys.exit()
+            Utility.show_error_popup("No score files found in the score folder.")
         elif selected_files:
             random_file = random.choice(selected_files)
             self.play_score("./score/" + random_file)
