@@ -5,6 +5,7 @@ import pyautogui
 import time
 import random
 import sys
+import datetime
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -19,9 +20,22 @@ from kivy.resources import resource_add_path
 
 pyautogui.PAUSE = 0
 
+class Utils():
+    @classmethod
+    def format_time(cls, milliseconds):
+        seconds, milliseconds = divmod(milliseconds, 1000)
+        minutes, seconds = divmod(seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+        
+        if hours == 0:
+            return f"{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
+        else:
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}.{milliseconds:03d}"
+
 class SteamSkyMusicStudioGUI(App):
     def build(self):
         self.title = "SteamSky Music Studio"
+        self.score_folder = "./score"
         self.layout = BoxLayout(orientation="vertical", spacing=10, padding=10)
 
         resource_add_path('./fonts')
@@ -74,6 +88,7 @@ class SteamSkyMusicStudioGUI(App):
 
     def play_score(self, file_path):
         score_data = self.load_score_file(file_path)
+        Utility = Utils()
 
         if score_data and isinstance(score_data, list):
             hwnd = win32gui.FindWindow(None, "Sky")
@@ -84,19 +99,30 @@ class SteamSkyMusicStudioGUI(App):
             win32gui.SetForegroundWindow(hwnd)
             start_time = time.time() * 1000
 
+            total_notes = len(score_data[0]["songNotes"])
             for i, note in enumerate(score_data[0]["songNotes"]):
                 key = note["key"]
                 if key.startswith("2Key"):
                     key = key.replace("2Key", "1Key")
 
+                elapsed_time = time.time() * 1000 - start_time
+                time_to_wait = note["time"] - elapsed_time
+                progress = (i + 1) / total_notes * 100
+
+                if time_to_wait > 0:
+                    time.sleep(time_to_wait / 1000)
+
+                end_time = score_data[0]["songNotes"][-1]["time"]
+                print(f"[{progress:.2f}%] Press Key {key} at {Utility.format_time(int(elapsed_time))}/{Utility.format_time(int(end_time))}")
                 self.press_key(key)
 
-                if i + 1 < len(score_data[0]["songNotes"]):
-                    next_note = score_data[0]["songNotes"][i + 1]
-                    elapsed_time = time.time() * 1000 - start_time
-                    time_to_wait = next_note["time"] - elapsed_time
-                    if time_to_wait > 0:
-                        time.sleep(time_to_wait / 1000)
+#                if i + 1 < len(score_data[0]["songNotes"]):
+#                    next_note = score_data[0]["songNotes"][i + 1]
+#                    elapsed_time = time.time() * 1000 - start_time
+#                    time_to_wait = next_note["time"] - elapsed_time
+#                    if time_to_wait > 0:
+#                        time.sleep(time_to_wait / 1000)
+
         else:
             self.show_error_popup("Sorry, Not Supported This File")
 
@@ -115,10 +141,13 @@ class SteamSkyMusicStudioGUI(App):
             self.play_score(selected_file)
 
     def select_random_score(self, instance):
-        score_files = self.file_chooser.get_files("./score", filters=["*.json", "*.txt"])
-        if score_files:
-            random_file = random.choice(score_files)
-            self.play_score(random_file)
+        selected_files = [f for f in os.listdir(self.score_folder) if f.endswith((".json", ".txt"))]
+        if not selected_files:
+            print("No score files found in the score folder.")
+            sys.exit()
+        elif selected_files:
+            random_file = random.choice(selected_files)
+            self.play_score("./score/" + random_file)
 
 if __name__ == "__main__":
     SteamSkyMusicStudioGUI().run()
