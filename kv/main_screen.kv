@@ -1,0 +1,114 @@
+#: import FadeTransition kivy.uix.screenmanager.FadeTransition
+
+<MainScreen>
+	nav_drawer: nav_drawer
+	inner_main_screen_manager: inner_main_screen_manager
+
+	MDNavigationLayout:
+		InnerMainScreenManager:
+			id: inner_main_screen_manager
+			transition: FadeTransition(duration = 0.2)
+
+			InnerMainScreen:
+				name: "inner_main_screen"
+
+			InstrumentsScreen:
+				name: "instruments_screen"
+
+			SettingsScreen:
+				name: "settings_screen"
+
+		MDNavigationDrawer:
+			id: nav_drawer
+			type: "standard"
+			radius: 0
+			# md_bg_color: app.theme_cls.bg_normal
+
+			# Here we put widgets that are drawn inside drawer
+			MDNavigationDrawerMenu:
+				Widget:
+					size_hint_y: None    # put this `None` so that ``height`` can take effect
+					height: dp(15)
+
+				MDNavigationDrawerHeader:
+					title: app.title
+
+				Widget:
+					size_hint_y: None
+					height: dp(25)
+
+				NavigationDrawerItem:
+					icon: "home"
+					text: app.localization.HOME 
+					# Don't edit selected property as it has a bug with text color, sadly
+					# selected: True
+
+					on_release: app.change_inner_screen("inner_main_screen")
+
+				NavigationDrawerItem:
+					icon: "piano"
+					text: app.localization.INSTRUMENTS
+
+					on_release: app.change_inner_screen("instruments_screen")
+
+				NavigationDrawerItem:
+					icon: "cog"    # why the hell "cog" is "settings" icon??
+					text: app.localization.SETTINGS
+
+					on_release: app.change_inner_screen("settings_screen")
+
+
+# Put `InnerMainScreen` here, because there is no reason to put it in a seperate file
+<InnerMainScreen>
+	scores_list: scores_list
+	current_score_title: current_score_title
+	stop_button: stop_button
+	play_button: play_button
+
+	MDBoxLayout:
+		orientation: "vertical"
+		padding: [0, dp(15), 0, 0]
+
+		MDLabel:
+			size_hint_y: None
+			adaptive_height: True
+			text: app.localization.HOME
+			font_size: dp(24)
+			halign: "center"
+
+		MDScrollView:
+			MDBoxLayout:
+				id: scores_list
+
+				size_hint_y: None
+				orientation: "vertical"
+				adaptive_height: True
+
+		MDBoxLayout:
+			size_hint_y: None
+			adaptive_height: True
+			orientation: "horizontal"
+			padding: dp(15)
+			spacing: dp(15)
+			md_bg_color: app.theme_cls.bg_light
+
+			MDLabel:
+				id: current_score_title
+				text: app.localization.NO_SCORE_SELECTED
+
+			MDFillRoundFlatIconButton:
+				id: stop_button
+				icon: "stop"
+				text: app.localization.STOP
+				disabled: True
+
+				on_release: root.stop()
+
+			MDFillRoundFlatIconButton:
+				id: play_button
+				icon: "play"
+				text: app.localization.PLAY
+				disabled: True
+
+				on_release: root.play()
+

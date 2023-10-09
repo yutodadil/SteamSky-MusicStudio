@@ -1,3 +1,6 @@
+chardet=5.2.0
 pyautogui==0.9.54
-pywin32==305
+pywin32==306
+windows-filedialogs==0.0.6
 kivy==2.2.1
+https://github.com/kivymd/KivyMD/archive/1152d3c31229b357336cb9e19cfaa2ba8c6941bc.zip
