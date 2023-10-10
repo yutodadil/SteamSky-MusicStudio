@@ -61,7 +61,9 @@ class Score:
 			data = file.read()
 
 		try:
-			json_data = json.loads(data.decode("cp1251"))
+			# no need for decoding `data`. `json.loads(...)` accepts byte strings
+			# this is more recommended because it can automatically handle file encoding
+			json_data = json.loads(data)
 		except json.JSONDecodeError as e:
 			logger.debug("Score: Trying to detect encoding of: {}".format(self.score_path))
 
@@ -78,7 +80,10 @@ class Score:
 				json_data = json.loads(data.decode(encoding))
 
 			except json.JSONDecodeError as e2:
-				raise ScoreParseError(e2)
+				try:
+					json_data = json.loads(data.decode("utf-16-le", errors = "ignore"))
+				except json.JSONDecodeError as e3:
+					raise ScoreParseError(e2)
 
 		if type(json_data) is list:
 			if len(json_data) > 0:
