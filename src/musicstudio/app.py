@@ -93,7 +93,7 @@ class InnerMainScreen(MDScreen):
 
         for root, dirs, files in os.walk(musicstudio.scores_path):
             for filename in files:
-                if filename.endswith(".json"):    # scores must be in json format
+                if filename.endswith((".json", ".txt")):    # scores must be in json format
                     score_path = os.path.join(root, filename)
 
                     try:

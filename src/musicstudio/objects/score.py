@@ -55,19 +55,19 @@ class Score:
 
 	def reload(self):
 		json_data = None
+		data = None
+
+		with open(self.score_path, "rb") as file:
+			data = file.read()
 
 		try:
-			with open(self.score_path, "r", encoding = "cp1251") as file:
-				json_data = json.load(file)
+			json_data = json.loads(data.decode("cp1251"))
 		except json.JSONDecodeError as e:
-			logger.debug("Trying to detect encoding of: {}".format(self.score_path))
+			logger.debug("Score: Trying to detect encoding of: {}".format(self.score_path))
 
-			b = None
-			with open(self.score_path, "rb") as file:
-				b = file.read()
-			res = chardet.detect(b)
+			res = chardet.detect(data)
 			encoding = res.get("encoding", None)
-			logger.debug("Got encoding: {}".format(encoding))
+			logger.debug("Score: Got encoding: {}".format(encoding))
 
 			if not encoding:
 				raise ScoreParseError(e)
@@ -75,11 +75,16 @@ class Score:
 			encoding = encoding.lower().replace(" ", "-")
 
 			try:
-				with open(self.score_path, "r", encoding = encoding) as file:
-					json_data = json.load(file)
+				json_data = json.loads(data.decode(encoding))
 
 			except json.JSONDecodeError as e2:
 				raise ScoreParseError(e2)
+
+		if type(json_data) is list:
+			if len(json_data) > 0:
+				json_data = json_data[0]
+			else:
+				raise ScoreDataError(self.score_path)
 
 		self.raise_for_structure(json_data)
 

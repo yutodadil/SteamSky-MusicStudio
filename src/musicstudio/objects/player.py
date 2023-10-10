@@ -43,12 +43,12 @@ class ScorePlayer:
 		else:
 			logger.warning("f{key} Unknown Key")
 
-	def _play(self, stop_callback):
+	def _play(self, hwnd, stop_callback):
 		'''
 		The actual function that plays the score
 
 		NOTE: Don't remove this function and keep it seperate from `play()` function
-		      because we need to change this to non-ui-blocking event driven function
+		      because we need to change this to non-ui-blocking function
 		'''
 
 		self.set_state(ScorePlayerState.PLAYER_PLAYING)
@@ -74,7 +74,7 @@ class ScorePlayer:
 					break
 
 			end_time = self.score.song_notes[-1]["time"]
-			logger.debug(f"[{progress:.2f}%] Press Key {key} at {musicstudio.utils.format_time(int(elapsed_time))}/{musicstudio.utils.format_time(int(end_time))}")
+			logger.debug(f"Player: [{progress:.2f}%] Press Key {key} at {musicstudio.utils.format_time(int(elapsed_time))}/{musicstudio.utils.format_time(int(end_time))}")
 			self._press_key(key)
 
 		if callable(stop_callback):
@@ -92,11 +92,11 @@ class ScorePlayer:
 			if hwnd == 0:
 				raise WindowNotFoundError(window_name)
 
-		logger.debug("HWDN: \"{}\" -> {}".format(window_name, hwnd))
+		logger.debug("Player: HWND: \"{}\" -> {}".format(window_name, hwnd))
 
 		win32gui.SetForegroundWindow(hwnd)
 
-		self._play(stop_callback)
+		self._play(hwnd, stop_callback)
 
 	def stop(self):
 		self.set_state(ScorePlayerState.PLAYER_IDLE)
