@@ -1,4 +1,4 @@
-import threading    # no reason to remove this line, next plan is to make score playing seperate from main thread
+import threading
 import time
 import logging
 from enum import Enum
@@ -12,18 +12,21 @@ import pyautogui
 logger = logging.getLogger(__file__)
 
 class ScorePlayerState(Enum):
-	PLAYER_IDLE    = 0
-	PLAYER_PLAYING = 1
-	PLAYER_PAUSE   = 2    # TODO: need to implement pause feature
+	PLAYER_STOPPED    = 0
+	PLAYER_PLAYING    = 1
+	PLAYER_PAUSED     = 2    # TODO: need to implement pause feature
 
 class ScorePlayer:
 	'''
 	This class is responsible for playing scores
 	Must automatically handle windows
 	'''
+	_default_interrupt_function = None
+
 	def __init__(self):
-		self.state = ScorePlayerState.PLAYER_IDLE
+		self.state = ScorePlayerState.PLAYER_STOPPED
 		self.score = None
+		self.player_break = threading.Event()
 
 	def set_state(self, state):
 		self.state = state
@@ -32,8 +35,11 @@ class ScorePlayer:
 		return self.state
 
 	def set_score(self, score):
-		if self.state != ScorePlayerState.PLAYER_IDLE:
-			raise ScorePlayerActiveError("Cannot set `score` when `ScorePlayer.state != ScorePlayerState.PLAYER_IDLE`")
+		if self.state == ScorePlayerState.PLAYER_PLAYING:
+			raise ScorePlayerActiveError("Cannot select score when player is playing")
+
+		if self.state == ScorePlayerState.PLAYER_PAUSED:
+			self.stop()
 
 		self.score = score
 
@@ -43,7 +49,18 @@ class ScorePlayer:
 		else:
 			logger.warning("f{key} Unknown Key")
 
-	def _play(self, hwnd, stop_callback):
+	def _interrupt(self):
+		if self.state == self._interrupt_type:
+			return
+
+		self.set_state(self._interrupt_type)
+		self.player_break.set()
+
+	def _paused(self):
+		self.player_break.clear()
+		self.player_break.wait()
+
+	def _play(self, stop_callback):
 		'''
 		The actual function that plays the score
 
@@ -66,24 +83,39 @@ class ScorePlayer:
 			progress = (i + 1) / total_notes * 100
 
 			if time_to_wait > 0:
-				time.sleep(time_to_wait / 1000)
-				if hwnd != win32gui.GetForegroundWindow():
+				self.player_break.wait(time_to_wait / 1000)
+
+				if self.player_break.is_set():
+					if self.state == ScorePlayerState.PLAYER_PAUSED:
+						self._paused()
+
+					if self.state == ScorePlayerState.PLAYER_STOPPED:
+						break
+
+					self.player_break.clear()
+
+				if self.current_hwnd != win32gui.GetForegroundWindow():
 					# Here we could implement something like pausing the player when window changes
 					# but this is an idea for the next time :)
 					logger.warning("Window changed before the score is completed")
 					break
 
 			end_time = self.score.song_notes[-1]["time"]
+
 			logger.debug(f"Player: [{progress:.2f}%] Press Key {key} at {musicstudio.utils.format_time(int(elapsed_time))}/{musicstudio.utils.format_time(int(end_time))}")
 			self._press_key(key)
+
+		if self.player_break.is_set():
+			self.player_break.clear()
+		else:
+			self.set_state(ScorePlayerState.PLAYER_STOPPED)
 
 		if callable(stop_callback):
 			stop_callback()
 
-		self.stop()
-
 	def play(self, stop_callback = None):
 		window_name = "Sky"
+
 		hwnd = win32gui.FindWindow(None, window_name)
 		if hwnd == 0:
 			logger.warning("HWND of \"{}\" wasn't found, trying another method...".format(window_name))
@@ -95,11 +127,21 @@ class ScorePlayer:
 		logger.debug("Player: HWND: \"{}\" -> {}".format(window_name, hwnd))
 
 		win32gui.SetForegroundWindow(hwnd)
+		self.current_hwnd = hwnd
 
-		self._play(hwnd, stop_callback)
+		if self.state == ScorePlayerState.PLAYER_PAUSED:
+			self.state = ScorePlayerState.PLAYER_PLAYING
+			self.player_break.set()
+			return
+
+		threading.Thread(target = self._play, args = (stop_callback,)).start()
 
 	def stop(self):
-		self.set_state(ScorePlayerState.PLAYER_IDLE)
+		if (self.state != ScorePlayerState.PLAYER_STOPPED):
+			self._interrupt_type = ScorePlayerState.PLAYER_STOPPED
+			self._interrupt()
 
 	def pause(self):
-		raise NotImplementedError()
+		if (self.state != ScorePlayerState.PLAYER_PAUSED):
+			self._interrupt_type = ScorePlayerState.PLAYER_PAUSED
+			self._interrupt()

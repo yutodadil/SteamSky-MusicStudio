@@ -7,6 +7,7 @@ class _LocalizationBase:
 		"INSTRUMENTS" : "Instruments",
 		"SETTINGS" : "Settings",
 		"PLAY" : "Play",
+		"PAUSE" : "Pause",
 		"STOP" : "Stop",
 		"ADD" : "Add",
 		"REMOVE" : "Remove",
