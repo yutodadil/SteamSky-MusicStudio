@@ -74,8 +74,12 @@ class InnerMainScreen(MDScreen):
     stop_button = ObjectProperty(None)
     play_button = ObjectProperty(None)
 
+    def _init(self, delta = None):
+        self._play_widget_change(False)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        Clock.schedule_once(self._init)
 
     def on_enter(self):
         '''
@@ -88,6 +92,13 @@ class InnerMainScreen(MDScreen):
         return
 
     def reload_scores(self):
+        '''
+        This reloads scores from `musicstudio.score_path` folder
+
+        Note: Creating and removing kivy widgets are expensive (at least
+              that's what I know) so it is recommended to use the same widget
+              if widget deletion and addition process is happening
+        '''
         score_item_index = 0
         score_items_count = len(self.scores_list.children)
 
@@ -125,13 +136,32 @@ class InnerMainScreen(MDScreen):
             self.current_score_title.text = score_item.score.title
             self.play_button.disabled = False
 
+    def _play_widget_change(self, pause):
+        # remove all callbacks from play button first.
+        # In Kivy, callbacks stack up on top of each other
+        self.play_button.unbind(on_release = self.pause)
+        self.play_button.unbind(on_release = self.play)
+
+        if pause:
+            self.play_button.text = musicstudio.current_app.localization.PAUSE
+            self.play_button.icon = "pause"
+            self.play_button.bind(on_release = self.pause)
+            logger.debug("Button: set to pause")
+        else:
+            self.play_button.text = musicstudio.current_app.localization.PLAY
+            self.play_button.icon = "play"
+            self.play_button.bind(on_release = self.play)
+            logger.debug("Button: set to play")
+
     def _stop_callback(self):
         self.stop_button.disabled = True
-        self.play_button.disabled = False
+        self._play_widget_change(False)
 
-    def play(self):
+    def play(self, instance = None):
+        logger.debug("Play pressed")
         self.stop_button.disabled = False
-        self.play_button.disabled = True
+
+        self._play_widget_change(True)
 
         try:
             musicstudio.player.play(self._stop_callback)
@@ -139,9 +169,14 @@ class InnerMainScreen(MDScreen):
             self.stop()
             musicstudio.current_app.show_alert_dialog("Process not found")
 
-    def stop(self):
-        self.stop_button.disabled = True
-        self.play_button.disabled = False
+    def pause(self, instance = None):
+        logger.debug("Pause pressed")
+        self._play_widget_change(False)
+        musicstudio.player.pause()
+
+    def stop(self, instance = None):
+        logger.debug("Stop pressed")
+        self._stop_callback()
         musicstudio.player.stop()
 
 class SteamSkyMusicStudioGUI(MDApp):
