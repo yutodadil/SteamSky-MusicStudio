@@ -102,7 +102,7 @@
 				text: app.localization.STOP
 				disabled: True
 
-				on_release: root.stop()
+				on_release: root.stop(self)
 
 			MDFillRoundFlatIconButton:
 				id: play_button
@@ -110,5 +110,6 @@
 				text: app.localization.PLAY
 				disabled: True
 
-				on_release: root.play()
+				# don't bind this here
+				# on_release: root.play(self)
 
