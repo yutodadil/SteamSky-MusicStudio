@@ -27,7 +27,7 @@ class ScorePlayer:
 		self.state = ScorePlayerState.PLAYER_STOPPED
 		self.score = None
 		self.player_break = threading.Event()
-		pydirectinput.PAUSE = None
+		pydirectinput.PAUSE = 0    # Please don't put this to :None:, instead use 0
 
 	def set_state(self, state):
 		self.state = state
@@ -46,6 +46,7 @@ class ScorePlayer:
 
 	def _press_key(self, key):
 		if key in musicstudio.consts.NOTE_KEY_MAPPINGS:
+			logger.debug("KeyPress: {}".format(musicstudio.consts.NOTE_KEY_MAPPINGS[key]))
 			pydirectinput.press(musicstudio.consts.NOTE_KEY_MAPPINGS[key])
 		else:
 			logger.warning("f{key} Unknown Key")
