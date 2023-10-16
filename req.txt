@@ -1,5 +1,6 @@
 chardet==5.2.0
-pyautogui==0.9.54
+pydirectinput==1.0.4
+pydirectinput-rgx==2.1.0
 pywin32==306
 windows-filedialogs==0.0.6
 kivy==2.2.1
