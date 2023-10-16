@@ -179,6 +179,7 @@ class InnerMainScreen(MDScreen):
         self._stop_callback()
         musicstudio.player.stop()
 
+
 class SteamSkyMusicStudioGUI(MDApp):
     dialog = None
     inner_main_screen_manager = ObjectProperty(None)
@@ -194,6 +195,9 @@ class SteamSkyMusicStudioGUI(MDApp):
 
         resource_add_path(os.path.join(musicstudio.assets_path, "fonts"))
         LabelBase.register(DEFAULT_FONT, fn_regular="NotoSansCJK-Regular.ttc")
+
+        if musicstudio.IS_EXE:
+            logger.debug("App: Application is '.exe'")
 
     def _load_kvs(self):
         '''
